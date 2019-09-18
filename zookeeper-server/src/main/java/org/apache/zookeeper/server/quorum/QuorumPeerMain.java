@@ -128,6 +128,7 @@ public class QuorumPeerMain {
         if (args.length == 1 && config.isDistributed()) {
             runFromConfig(config);
         } else {
+            //只有一个节点，且standaloneEnabled=false，则以单机模式启动
             LOG.warn("Either no config or no quorum defined in config, running " + " in standalone mode");
             // there is only server in the quorum -- run as standalone
             ZooKeeperServerMain.main(args);
@@ -215,6 +216,7 @@ public class QuorumPeerMain {
             }
 
             quorumPeer.start();
+            //主线程被join()，等待quorumPeer线程执行完成
             quorumPeer.join();
         } catch (InterruptedException e) {
             // warn, but generally this is ok

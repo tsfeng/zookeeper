@@ -95,6 +95,16 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.setACL:
                 case OpCode.multi:
                 case OpCode.check:
+
+//                    //测试同步一致性
+//                    for (int i = 5; i > 0; i--) {
+//                        System.out.println("同步倒计时");
+//                        try {
+//                            Thread.sleep(1000);
+//                        } catch (InterruptedException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
                     zks.getFollower().request(request);
                     break;
                 case OpCode.createSession:

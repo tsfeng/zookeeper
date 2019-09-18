@@ -1010,6 +1010,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         if (!getView().containsKey(myid)) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
+        // zkServer中有一个内存数据库对象ZKDatabase， zkServer在启动时需要将已被持久化的数据加载进内存中，也就是加载至ZKDatabase
         loadDataBase();
         startServerCnxnFactory();
         try {
@@ -1020,6 +1021,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         startLeaderElection();
         startJvmPauseMonitor();
+        // QuorumPeer类是一个ZooKeeperThread线程，以下代码实际就是运行一个线程，相当于运行QuorumPeer类中的run方法，
+        // 这个方法也是集群模式下Zkserver启动最核心的方法。
         super.start();
     }
 
@@ -1216,6 +1219,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             QuorumCnxManager.Listener listener = qcm.listener;
             if (listener != null) {
                 listener.start();
+                //默认FastLeaderElection
                 FastLeaderElection fle = new FastLeaderElection(this, qcm);
                 fle.start();
                 le = fle;

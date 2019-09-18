@@ -135,13 +135,18 @@ public class QuorumCnxManager {
 
     /*
      * Mapping from Peer to Thread number
+     * 传输层的每个zkServer需要发送选票信息给其他服务器，SendWorker就是封装了Socket的发送器，而senderWorkerMap就是用来记录其他服务器id以及对应的SendWorker的
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    /**
+     * 传输层的每个zkServer需要发送选票信息给其他服务器，这些选票信息来至应用层，在传输层中将会按服务器id分组保存在queueSendMap中。
+     */
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
     /*
      * Reception queue
+     * 传输层的每个zkServer将接收其他服务器发送的选票信息，这些选票会保存在recvQueue中，以提供给应用层使用。
      */
     public final ArrayBlockingQueue<Message> recvQueue;
     /*
@@ -252,6 +257,12 @@ public class QuorumCnxManager {
 
     }
 
+    /**
+     * 传输层实现
+     * 传输层的每个zkServer需要发送选票信息给其他服务器，SendWorker就是封装了Socket的发送器，
+     * 而senderWorkerMap就是用来记录其他服务器id以及对应的SendWorker的。
+     * 传输层的每个zkServer将接收其他服务器发送的选票信息，这些选票会保存在recvQueue中，以提供给应用层使用。
+     */
     public QuorumCnxManager(QuorumPeer self, final long mySid, Map<Long, QuorumPeer.QuorumServer> view, QuorumAuthServer authServer, QuorumAuthLearner authLearner, int socketTimeout, boolean listenOnAllIPs, int quorumCnxnThreadsSize, boolean quorumSaslAuthEnabled) {
         this.recvQueue = new ArrayBlockingQueue<Message>(RECV_CAPACITY);
         this.queueSendMap = new ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>>();
@@ -532,6 +543,10 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
+        // 在集群启动时，一台服务器需要去连另外一台服务器，从而建立Socket用来进行选票传输。
+        // 那么如果现在A服务器去连B服务器，同时B服务器也去连A服务器，那么就会导致建立了两条Socket，
+        // 我们知道Socket是双向的，Socket的双方是可以相互发送和接收数据的，那么现在A、B两台服务器建立两条Socket是没有意义的，
+        // 所以ZooKeeper在实现时做了限制，只允许服务器ID较大者去连服务器ID较小者，小ID服务器去连大ID服务器会被拒绝
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
